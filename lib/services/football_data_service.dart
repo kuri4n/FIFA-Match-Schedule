@@ -78,8 +78,7 @@ class FootballDataService {
         return 'Scheduled';
     }
   }
-
-  Future<void> printKnockoutMatchMappingSql() async {
+  Future<void> syncKnockoutMatches() async {
     final uri = Uri.parse(
       '$_baseUrl/competitions/WC/matches',
     );
@@ -89,36 +88,58 @@ class FootballDataService {
       headers: _headers,
     );
 
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to fetch World Cup matches: ${response.body}',
+      );
+    }
+
     final data = jsonDecode(response.body);
     final matches = data['matches'] as List;
 
-    final knockoutMatches = matches
-        .where((match) => match['stage'] != 'GROUP_STAGE')
-        .toList();
+    for (final match in matches) {
+      final stage = match['stage'];
 
-    for (int i = 0; i < knockoutMatches.length; i++) {
-      final match = knockoutMatches[i];
+      if (stage == 'GROUP_STAGE') continue;
 
-      final matchNo = 'M${73 + i}';
       final matchId = match['id'];
       final status = match['status'];
       final utcDate = match['utcDate'];
-      final stage = match['stage'];
 
-      if (matchId == null || status == null || utcDate == null) {
-        continue;
+      final home = match['homeTeam'];
+      final away = match['awayTeam'];
+
+      final score = match['score'];
+      final fullTime = score?['fullTime'];
+
+      final homeScore = fullTime?['home'];
+      final awayScore = fullTime?['away'];
+
+      final updateData = <String, dynamic>{
+        'football_data_status': status,
+        'status': _mapStatus(status),
+        'team1_score': homeScore,
+        'team2_score': awayScore,
+        'kickoff_time': utcDate,
+        'last_synced_at': DateTime.now().toIso8601String(),
+      };
+
+      if (home != null && home['name'] != null && home['tla'] != null) {
+        updateData['team1'] = home['name'];
+        updateData['team1_flag_code'] = home['tla'].toString().toLowerCase();
       }
 
-      print(
-        "UPDATE knockout_matches "
-        "SET football_data_match_id = $matchId, "
-        "football_data_status = '$status', "
-        "kickoff_time = '$utcDate' "
-        "WHERE match_no = '$matchNo'; "
-        "-- stage=$stage",
-      );
-    }
-  }
+      if (away != null && away['name'] != null && away['tla'] != null) {
+        updateData['team2'] = away['name'];
+        updateData['team2_flag_code'] = away['tla'].toString().toLowerCase();
+      }
 
-  
+      await Supabase.instance.client
+          .from('knockout_matches')
+          .update(updateData)
+          .eq('football_data_match_id', matchId);
+    }
+
+    print('Knockout matches synced successfully');
+  }
 }

@@ -13,13 +13,28 @@ class TableScreen extends StatefulWidget {
   State<TableScreen> createState() => _TableScreenState();
 }
 
-class _TableScreenState extends State<TableScreen> {
+class _TableScreenState extends State<TableScreen>
+    with SingleTickerProviderStateMixin {
   late Future<List<GroupStandingModel>> standingsFuture;
+  late AnimationController _rotationController;
+
+  bool isSyncing = false;
 
   @override
   void initState() {
     super.initState();
     standingsFuture = ApiService().getStandings();
+
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -41,25 +56,42 @@ class _TableScreenState extends State<TableScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.secondary2,
         foregroundColor: Colors.white,
-        onPressed: () async {
-          await FootballDataService().syncWorldCupMatches();
+        onPressed: isSyncing
+            ? null
+            : () async {
+                setState(() => isSyncing = true);
+                _rotationController.repeat();
 
-          await ApiService().recalculateStandings();
-          await ApiService().populateKnownRoundOf32Slots();
+                try {
+                  //await FootballDataService().syncWorldCupMatches();
+                  //await FootballDataService().syncKnockoutMatches();
+                  await ApiService().recalculateStandings();
+                  await ApiService().populateKnownRoundOf32Slots();
+                  await ApiService().populateThirdPlaceSlots();
+                  await ApiService().advanceKnockoutWinners();
+                  await ApiService().getBestThirdPlacedTeams();
 
-          if (!context.mounted) return;
+                  if (!context.mounted) return;
 
-          setState(() {
-            standingsFuture = ApiService().getStandings();
-          });
+                  setState(() {
+                    standingsFuture = ApiService().getStandings();
+                  });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Matches and standings synced'),
-            ),
-          );
-        },
-        child: const Icon(Icons.refresh),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Matches and standings synced'),
+                    ),
+                  );
+                } finally {
+                  _rotationController.stop();
+                  _rotationController.reset();
+                  if (mounted) setState(() => isSyncing = false);
+                }
+              },
+        child: RotationTransition(
+          turns: _rotationController,
+          child: const Icon(Icons.refresh),
+        ),
       ),
       body: FutureBuilder<List<GroupStandingModel>>(
         future: standingsFuture,
