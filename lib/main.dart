@@ -5,9 +5,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/startup_screen.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/football_api_service.dart';
+import 'services/football_data_service.dart';
+import '../services/api_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
     url: 'https://stnidxbsejcaljtptrdh.supabase.co',

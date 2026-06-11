@@ -110,7 +110,6 @@ class ApiService {
           ''')
           .order('kickoff_time', ascending: true);
 
-      print('DEBUG: Got ${response.length} matches from API');
 
       final prefs = await SharedPreferences.getInstance();
       final favoriteTeamCode = prefs.getString('favorite_team_code');
@@ -154,13 +153,11 @@ class ApiService {
                 awayTeam?['name'] == favoriteTeamName,
           );
         } catch (e) {
-          print('DEBUG: Error parsing match row: $e');
-          print('DEBUG: Row data: $row');
+
           rethrow;
         }
       }).toList();
     } catch (e) {
-      print('DEBUG: Error in getMatches: $e');
       rethrow;
     }
   }
@@ -427,5 +424,85 @@ class ApiService {
           })
           .eq('id', stats['id']);
     }
+  }
+  Future<void> populateKnownRoundOf32Slots() async {
+    final rows = await _client
+        .from('standings')
+        .select('''
+          group_name,
+          points,
+          goal_difference,
+          goals_for,
+          teams (
+            name,
+            fifa_code
+          )
+        ''');
+
+    final Map<String, List<dynamic>> grouped = {};
+
+    for (final row in rows) {
+      grouped.putIfAbsent(row['group_name'], () => []);
+      grouped[row['group_name']]!.add(row);
+    }
+
+    final Map<String, Map<String, dynamic>> winner = {};
+    final Map<String, Map<String, dynamic>> runnerUp = {};
+
+    grouped.forEach((groupName, teams) {
+      teams.sort((a, b) {
+        final pointsCompare = b['points'].compareTo(a['points']);
+        if (pointsCompare != 0) return pointsCompare;
+
+        final gdCompare =
+            b['goal_difference'].compareTo(a['goal_difference']);
+        if (gdCompare != 0) return gdCompare;
+
+        return b['goals_for'].compareTo(a['goals_for']);
+      });
+
+      winner[groupName] = teams[0]['teams'];
+      runnerUp[groupName] = teams[1]['teams'];
+    });
+
+    Future<void> updateSlot({
+      required String matchNo,
+      Map<String, dynamic>? team1,
+      Map<String, dynamic>? team2,
+    }) async {
+      final data = <String, dynamic>{};
+
+      if (team1 != null) {
+        data['team1'] = team1['name'];
+        data['team1_flag_code'] = team1['fifa_code'];
+      }
+
+      if (team2 != null) {
+        data['team2'] = team2['name'];
+        data['team2_flag_code'] = team2['fifa_code'];
+      }
+
+      await _client
+          .from('knockout_matches')
+          .update(data)
+          .eq('match_no', matchNo);
+    }
+
+    await updateSlot(matchNo: 'M73', team1: winner['Group A']);
+    await updateSlot(matchNo: 'M74', team1: runnerUp['Group A'], team2: runnerUp['Group B']);
+    await updateSlot(matchNo: 'M75', team1: winner['Group C']);
+    await updateSlot(matchNo: 'M76', team1: winner['Group D'], team2: runnerUp['Group E']);
+    await updateSlot(matchNo: 'M77', team1: winner['Group E']);
+    await updateSlot(matchNo: 'M78', team1: runnerUp['Group D'], team2: runnerUp['Group F']);
+    await updateSlot(matchNo: 'M79', team1: winner['Group G']);
+    await updateSlot(matchNo: 'M80', team1: winner['Group H'], team2: runnerUp['Group I']);
+    await updateSlot(matchNo: 'M81', team1: winner['Group I']);
+    await updateSlot(matchNo: 'M82', team1: runnerUp['Group E'], team2: runnerUp['Group G']);
+    await updateSlot(matchNo: 'M83', team1: winner['Group B']);
+    await updateSlot(matchNo: 'M84', team1: winner['Group F'], team2: runnerUp['Group C']);
+    await updateSlot(matchNo: 'M85', team1: winner['Group J']);
+    await updateSlot(matchNo: 'M86', team1: runnerUp['Group H'], team2: runnerUp['Group J']);
+    await updateSlot(matchNo: 'M87', team1: winner['Group K']);
+    await updateSlot(matchNo: 'M88', team1: runnerUp['Group K'], team2: runnerUp['Group L']);
   }
 }

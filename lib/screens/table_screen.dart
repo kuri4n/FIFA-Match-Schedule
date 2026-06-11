@@ -4,6 +4,7 @@ import '../models/group_standing_model.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/flag_widget.dart';
+import '../services/football_data_service.dart';
 
 class TableScreen extends StatefulWidget {
   const TableScreen({super.key});
@@ -41,7 +42,10 @@ class _TableScreenState extends State<TableScreen> {
         backgroundColor: AppColors.secondary2,
         foregroundColor: Colors.white,
         onPressed: () async {
+          await FootballDataService().syncWorldCupMatches();
+
           await ApiService().recalculateStandings();
+          await ApiService().populateKnownRoundOf32Slots();
 
           if (!context.mounted) return;
 
@@ -51,7 +55,7 @@ class _TableScreenState extends State<TableScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Standings recalculated'),
+              content: Text('Matches and standings synced'),
             ),
           );
         },
