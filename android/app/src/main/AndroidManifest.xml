@@ -7,7 +7,7 @@
 
 
     <application
-        android:label="flutter_app"
+        android:label="Tekkers"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 

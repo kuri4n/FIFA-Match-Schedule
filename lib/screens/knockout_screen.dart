@@ -14,6 +14,17 @@ class KnockoutScreen extends StatefulWidget {
 class _KnockoutScreenState extends State<KnockoutScreen> {
   late Future<List<KnockoutMatchModel>> knockoutMatchesFuture;
 
+  final List<String> knockoutRounds = [
+    'Round of 32',
+    'Round of 16',
+    'Quarter-final',
+    'Semi-final',
+    'Third Place',
+    'Final',
+  ];
+
+  String selectedRound = 'Round of 32';
+
   @override
   void initState() {
     super.initState();
@@ -55,20 +66,59 @@ class _KnockoutScreenState extends State<KnockoutScreen> {
           }
 
           final matches = snapshot.data ?? [];
-          final groupedMatches = _groupMatchesByRound(matches);
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: groupedMatches.length,
-            itemBuilder: (context, index) {
-              final roundName = groupedMatches.keys.elementAt(index);
-              final roundMatches = groupedMatches[roundName]!;
+          final filteredMatches = matches
+              .where((match) => match.roundName == selectedRound)
+              .toList();
 
-              return _RoundSection(
-                roundName: roundName,
-                matches: roundMatches,
-              );
-            },
+          final groupedMatches = _groupMatchesByRound(filteredMatches);
+
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedRound,
+                    dropdownColor: AppColors.secondary1,
+                    iconEnabledColor: Colors.white,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    items: knockoutRounds.map((round) {
+                      return DropdownMenuItem(
+                        value: round,
+                        child: Text(round),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+
+                      setState(() {
+                        selectedRound = value;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: groupedMatches.length,
+                  itemBuilder: (context, index) {
+                    final roundName = groupedMatches.keys.elementAt(index);
+                    final roundMatches = groupedMatches[roundName]!;
+
+                    return _RoundSection(
+                      roundName: roundName,
+                      matches: roundMatches,
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),

@@ -23,25 +23,26 @@ class _MatchesScreenState extends State<MatchesScreen> {
   String selectedTeam = 'All';
   bool showStarredOnly = false;
 
+  final ScrollController _scrollController = ScrollController();
+  bool hasAutoScrolled = false;
+
   @override
   void initState() {
     super.initState();
     matchesFuture = ApiService().getMatches();
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   List<MatchModel> _sortMatches(List<MatchModel> matches) {
     final sortedMatches = [...matches];
 
     sortedMatches.sort((a, b) {
-      final aFinished = a.status == 'Finished';
-      final bFinished = b.status == 'Finished';
-
-      if (aFinished && !bFinished) return -1;
-      if (!aFinished && bFinished) return 1;
-
-      return a.matchDateTime.compareTo(
-        b.matchDateTime,
-      );
+      return a.matchDateTime.compareTo(b.matchDateTime);
     });
 
     return sortedMatches;
@@ -85,6 +86,32 @@ class _MatchesScreenState extends State<MatchesScreen> {
 
       return matchesTeam && matchesStarFilter;
     }).toList();
+  }
+
+  void _scrollToUpcomingMatch(List<MatchModel> matches) {
+    if (hasAutoScrolled || matches.isEmpty) return;
+
+    final index = matches.indexWhere(
+      (match) =>
+          match.status != 'Finished' &&
+          match.matchDateTime.isAfter(DateTime.now().subtract(
+            const Duration(hours: 3),
+          )),
+    );
+
+    if (index == -1) return;
+
+    hasAutoScrolled = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+
+      _scrollController.animateTo(
+        index * 145,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   @override
@@ -164,6 +191,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                 _buildTeamFilterList(matches);
             final filteredMatches =
                 _filterMatches(matches);
+            _scrollToUpcomingMatch(filteredMatches);
 
             return Column(
               children: [
@@ -275,6 +303,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                           ),
                         )
                       : ListView.builder(
+                          controller: _scrollController,
                           padding:
                               const EdgeInsets.all(16),
                           itemCount:

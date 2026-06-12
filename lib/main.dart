@@ -12,14 +12,14 @@ import '../services/api_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await NotificationService.init();
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
     url: 'https://stnidxbsejcaljtptrdh.supabase.co',
     anonKey: 'sb_publishable_HbH80m4D4q-PUU7o2XurRw_j3clK3TY',
   );
-
-  await NotificationService.init();
 
   runApp(const MyApp());
 }

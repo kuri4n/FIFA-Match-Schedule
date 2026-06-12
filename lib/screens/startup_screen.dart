@@ -23,6 +23,8 @@ class _StartupScreenState extends State<StartupScreen> {
   }
 
   Future<void> checkFavoriteTeam() async {
+    await Future.delayed(const Duration(seconds: 2));
+
     final prefs = await SharedPreferences.getInstance();
     final teamId = prefs.getInt('favorite_team_id');
 
@@ -43,11 +45,31 @@ class _StartupScreenState extends State<StartupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: AppColors.primary,
       body: Center(
-        child: CircularProgressIndicator(
-          color: AppColors.secondary2,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/fifa_wc_2026.png',
+              height: 180,
+            ),
+
+            const SizedBox(height: 24),
+
+            const Text(
+              'FIFA World Cup 2026',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            const CircularProgressIndicator(),
+          ],
         ),
       ),
     );
