@@ -6,6 +6,8 @@ import '../widgets/flag_widget.dart';
 import '../utils/page_transitions.dart';
 import 'tournament_screen.dart';
 import 'team_screen.dart';
+import '../services/api_service.dart';
+import '../services/football_data_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,9 +23,39 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    Future.microtask(() => _autoSync());
     loadTeam();
   }
+  Future<void> _autoSync() async {
+    final prefs = await SharedPreferences.getInstance();
 
+    final lastSyncMillis = prefs.getInt('last_auto_sync');
+
+    if (lastSyncMillis != null) {
+      final lastSync = DateTime.fromMillisecondsSinceEpoch(lastSyncMillis);
+
+      if (DateTime.now().difference(lastSync).inMinutes < 15) {
+        return;
+      }
+    }
+
+    try {
+      await FootballDataService().syncWorldCupMatches();
+      await FootballDataService().syncKnockoutMatches();
+
+      await ApiService().recalculateStandings();
+      await ApiService().populateKnownRoundOf32Slots();
+      await ApiService().populateThirdPlaceSlots();
+      await ApiService().advanceKnockoutWinners();
+
+      await prefs.setInt(
+        'last_auto_sync',
+        DateTime.now().millisecondsSinceEpoch,
+      );
+    } catch (e) {
+      print('Auto sync failed: $e');
+    }
+  }
   Future<void> loadTeam() async {
     final prefs = await SharedPreferences.getInstance();
 

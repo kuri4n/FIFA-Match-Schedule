@@ -31,8 +31,18 @@ class _MatchDetailsScreenState
   void initState() {
     super.initState();
 
-    homeSquadFuture = ApiService().getSquadByTeamId(widget.match.homeTeamId);
-    awaySquadFuture = ApiService().getSquadByTeamId(widget.match.awayTeamId);
+    homeSquadFuture = Future.value([]);
+    awaySquadFuture = Future.value([]);
+    
+    if (widget.match.homeTeamId != null) {
+      homeSquadFuture =
+          ApiService().getSquadByTeamId(widget.match.homeTeamId!);
+    }
+
+    if (widget.match.awayTeamId != null) {
+      awaySquadFuture =
+          ApiService().getSquadByTeamId(widget.match.awayTeamId!);
+    }
     eventsFuture = ApiService().getMatchEvents(widget.match.id);
   }
 

@@ -1,7 +1,7 @@
 class MatchModel {
   final int id;
-  final int homeTeamId;
-  final int awayTeamId;
+  final int? homeTeamId;
+  final int? awayTeamId;
   final String homeTeam;
   final String awayTeam;
 

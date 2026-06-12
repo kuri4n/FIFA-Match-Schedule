@@ -83,8 +83,7 @@ class ApiService {
 
   Future<List<MatchModel>> getMatches() async {
     try {
-      
-      final response = await _client
+      final groupResponse = await _client
           .from('matches')
           .select('''
             id,
@@ -107,9 +106,24 @@ class ApiService {
               fifa_code,
               code
             )
-          ''')
-          .order('kickoff_time', ascending: true);
+          ''');
 
+      final knockoutResponse = await _client
+          .from('knockout_matches')
+          .select('''
+            id,
+            match_no,
+            round_name,
+            team1,
+            team2,
+            team1_flag_code,
+            team2_flag_code,
+            kickoff_time,
+            status,
+            team1_score,
+            team2_score,
+            bracket_position
+          ''');
 
       final prefs = await SharedPreferences.getInstance();
       final favoriteTeamCode = prefs.getString('favorite_team_code');
@@ -122,16 +136,17 @@ class ApiService {
           .select('match_id')
           .eq('user_id', userId);
 
-      final starredMatchIds = starredRows
-          .map((row) => row['match_id'] as int)
-          .toSet();
+      final starredMatchIds =
+          starredRows.map((row) => row['match_id'] as int).toSet();
 
-      return response.map((row) {
-        try {
-          final homeTeam = row['home_team'];
-          final awayTeam = row['away_team'];
+      final List<MatchModel> allMatches = [];
 
-          return MatchModel(
+      for (final row in groupResponse) {
+        final homeTeam = row['home_team'];
+        final awayTeam = row['away_team'];
+
+        allMatches.add(
+          MatchModel(
             id: row['id'],
             homeTeamId: row['home_team_id'],
             awayTeamId: row['away_team_id'],
@@ -151,12 +166,39 @@ class ApiService {
                 awayTeam?['code'] == favoriteTeamCode ||
                 homeTeam?['name'] == favoriteTeamName ||
                 awayTeam?['name'] == favoriteTeamName,
-          );
-        } catch (e) {
+          ),
+        );
+      }
 
-          rethrow;
-        }
-      }).toList();
+      for (final row in knockoutResponse) {
+        allMatches.add(
+          MatchModel(
+            id: 1000 + (row['id'] as int),
+            homeTeamId: null,
+            awayTeamId: null,
+            homeTeam: row['team1'] ?? 'TBD',
+            awayTeam: row['team2'] ?? 'TBD',
+            homeFlagCode: row['team1_flag_code'] ?? 'un',
+            awayFlagCode: row['team2_flag_code'] ?? 'un',
+            matchDateTime: DateTime.parse(row['kickoff_time']).toLocal(),
+            status: row['status'] ?? 'Scheduled',
+            stageLabel: row['round_name'] ?? 'Knockout',
+            homeScore: row['team1_score'],
+            awayScore: row['team2_score'],
+            isStarred:
+                row['team1_flag_code'] == favoriteTeamCode ||
+                row['team2_flag_code'] == favoriteTeamCode ||
+                row['team1'] == favoriteTeamName ||
+                row['team2'] == favoriteTeamName,
+          ),
+        );
+      }
+
+      allMatches.sort(
+        (a, b) => a.matchDateTime.compareTo(b.matchDateTime),
+      );
+
+      return allMatches;
     } catch (e) {
       rethrow;
     }
@@ -428,6 +470,16 @@ class ApiService {
     }
   }
   Future<void> populateKnownRoundOf32Slots() async {
+    final finishedGroupMatches = await _client
+        .from('matches')
+        .select('id')
+        .like('round', 'Group %')
+        .eq('status', 'Finished');
+
+    if (finishedGroupMatches.length < 72) {
+      return;
+    }
+
     final rows = await _client
         .from('standings')
         .select('''
