@@ -2,20 +2,28 @@ import 'package:flutter/material.dart';
 
 class FlagWidget extends StatelessWidget {
   final String code;
+  final double width;
+  final double height;
+  final double borderRadius;
 
   const FlagWidget({
     super.key,
     required this.code,
+    this.width = 40,
+    this.height = 28,
+    this.borderRadius = 6,
   });
 
   @override
   Widget build(BuildContext context) {
+    final safeCode = code.trim().toLowerCase();
+
     return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(borderRadius),
       child: Image.network(
-        'https://flagcdn.com/w80/${code.toLowerCase()}.png',
-        width: 40,
-        height: 28,
+        'https://flagcdn.com/w80/$safeCode.png',
+        width: width,
+        height: height,
         fit: BoxFit.cover,
         loadingBuilder: (
           context,
@@ -27,8 +35,8 @@ class FlagWidget extends StatelessWidget {
           }
 
           return Container(
-            width: 40,
-            height: 28,
+            width: width,
+            height: height,
             color: Colors.grey.shade800,
             child: const Center(
               child: SizedBox(
@@ -47,8 +55,8 @@ class FlagWidget extends StatelessWidget {
           stackTrace,
         ) {
           return Container(
-            width: 40,
-            height: 28,
+            width: width,
+            height: height,
             color: Colors.grey,
             child: const Icon(
               Icons.flag,

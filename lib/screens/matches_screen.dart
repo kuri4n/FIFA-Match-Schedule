@@ -7,12 +7,54 @@ import '../utils/page_transitions.dart';
 import '../widgets/match_card.dart';
 import 'match_details_screen.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/flag_widget.dart';
+
 class MatchesScreen extends StatefulWidget {
   const MatchesScreen({super.key});
 
   @override
   State<MatchesScreen> createState() =>
       _MatchesScreenState();
+}
+
+bool showFavoriteOnly = false;
+String? favoriteTeamCode;
+String? favoriteTeamName;
+
+String _formatDateHeader(DateTime date) {
+  const days = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  return '${days[date.weekday - 1]} ${date.day} ${months[date.month - 1]} ${date.year}';
+}
+
+bool _isSameDay(DateTime a, DateTime b) {
+  return a.year == b.year &&
+      a.month == b.month &&
+      a.day == b.day;
 }
 
 class _MatchesScreenState extends State<MatchesScreen> {
@@ -30,7 +72,17 @@ class _MatchesScreenState extends State<MatchesScreen> {
   void initState() {
     super.initState();
     matchesFuture = ApiService().getMatches();
+    _loadFavoriteTeam();
   }
+
+  Future<void> _loadFavoriteTeam() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  setState(() {
+    favoriteTeamCode = prefs.getString('favorite_team_code');
+    favoriteTeamName = prefs.getString('favorite_team_name');
+  });
+}
 
   @override
   void dispose() {
@@ -84,7 +136,14 @@ class _MatchesScreenState extends State<MatchesScreen> {
       final matchesStarFilter =
           !showStarredOnly || match.isStarred;
 
-      return matchesTeam && matchesStarFilter;
+      final matchesFavoriteTeam =
+          !showFavoriteOnly ||
+          match.homeFlagCode == favoriteTeamCode ||
+          match.awayFlagCode == favoriteTeamCode ||
+          match.homeTeam == favoriteTeamName ||
+          match.awayTeam == favoriteTeamName;
+
+      return matchesTeam && matchesStarFilter && matchesFavoriteTeam;
     }).toList();
   }
 
@@ -288,6 +347,35 @@ class _MatchesScreenState extends State<MatchesScreen> {
                           ),
                         ),
                       ),
+
+                      const SizedBox(width: 12),
+
+                      if (favoriteTeamCode != null)
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              showFavoriteOnly = !showFavoriteOnly;
+                              expandedIndex = null;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: showFavoriteOnly
+                                  ? Colors.green
+                                  : AppColors.secondary1,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: FlagWidget(
+                              code: favoriteTeamCode!,
+                              width: 28,
+                              height: 20,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -312,48 +400,67 @@ class _MatchesScreenState extends State<MatchesScreen> {
                             final match =
                                 filteredMatches[index];
 
-                            return MatchCard(
-                              match: match,
-                              isExpanded:
-                                  expandedIndex ==
-                                      index,
-                              onLongPress: () {
-                                setState(() {
-                                  expandedIndex = index;
-                                });
-                              },
-                              onStarToggle: () async {
-                                final newValue =
-                                    !match.isStarred;
+                            final showDateHeader = index == 0 ||
+                            !_isSameDay(
+                              filteredMatches[index - 1].matchDateTime,
+                              match.matchDateTime,
+                            );
 
-                                setState(() {
-                                  match.isStarred =
-                                      newValue;
-                                });
-
-                                if (newValue) {
-                                  await ApiService()
-                                      .starMatch(match.id);
-                                } else {
-                                  await ApiService()
-                                      .unstarMatch(match.id);
-                                }
-                              },
-                              onTap: () async {
-                                await Navigator.push(
-                                  context,
-                                  PageTransitions
-                                      .fadeSlide(
-                                    MatchDetailsScreen(
-                                      match: match,
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (showDateHeader)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 4,
+                                      top: 18,
+                                      bottom: 10,
+                                    ),
+                                    child: Text(
+                                      _formatDateHeader(match.matchDateTime),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                );
 
-                                if (mounted) {
-                                  setState(() {});
-                                }
-                              },
+                                MatchCard(
+                                  match: match,
+                                  isExpanded: expandedIndex == index,
+                                  onLongPress: () {
+                                    setState(() {
+                                      expandedIndex = index;
+                                    });
+                                  },
+                                  onStarToggle: () async {
+                                    final newValue = !match.isStarred;
+
+                                    setState(() {
+                                      match.isStarred = newValue;
+                                    });
+
+                                    if (newValue) {
+                                      await ApiService().starMatch(match.id);
+                                    } else {
+                                      await ApiService().unstarMatch(match.id);
+                                    }
+                                  },
+                                  onTap: () async {
+                                    await Navigator.push(
+                                      context,
+                                      PageTransitions.fadeSlide(
+                                        MatchDetailsScreen(match: match),
+                                      ),
+                                    );
+
+                                    if (mounted) {
+                                      setState(() {});
+                                    }
+                                  },
+                                ),
+                              ],
                             );
                           },
                         ),
