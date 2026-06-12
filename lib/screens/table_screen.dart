@@ -67,7 +67,7 @@ class _TableScreenState extends State<TableScreen>
                   await FootballDataService().syncKnockoutMatches();
                   await ApiService().recalculateStandings();
                   await ApiService().populateKnownRoundOf32Slots();
-                  //await ApiService().populateThirdPlaceSlots();
+                  await ApiService().populateThirdPlaceSlots();
                   await ApiService().advanceKnockoutWinners();
 
                   if (!context.mounted) return;

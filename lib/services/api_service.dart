@@ -628,6 +628,35 @@ class ApiService {
     await advance(from1: 'M99', from2: 'M100', to: 'M102');
 
     await advance(from1: 'M101', from2: 'M102', to: 'M104');
+
+    final semi1 = matchesByNo['M101'];
+    final semi2 = matchesByNo['M102'];
+
+    final loser1 =
+        semi1 != null ? _getKnockoutLoser(semi1) : null;
+
+    final loser2 =
+        semi2 != null ? _getKnockoutLoser(semi2) : null;
+
+    final thirdPlaceData = <String, dynamic>{};
+
+    if (loser1 != null) {
+      thirdPlaceData['team1'] = loser1['name'];
+      thirdPlaceData['team1_flag_code'] = loser1['flag'];
+    }
+
+    if (loser2 != null) {
+      thirdPlaceData['team2'] = loser2['name'];
+      thirdPlaceData['team2_flag_code'] = loser2['flag'];
+    }
+
+    if (thirdPlaceData.isNotEmpty) {
+      await _client
+          .from('knockout_matches')
+          .update(thirdPlaceData)
+          .eq('match_no', 'M103');
+    }
+
   }
 
   Map<String, dynamic>? _getKnockoutWinner(dynamic match) {
@@ -652,6 +681,15 @@ class ApiService {
     };
   }
   Future<void> populateThirdPlaceSlots() async {
+    final finishedGroupMatches = await _client
+        .from('matches')
+        .select('id')
+        .like('round', 'Group %')
+        .eq('status', 'Finished');
+
+    if (finishedGroupMatches.length < 72) {
+      return;
+    }
     final thirdPlacedTeams = await getBestThirdPlacedTeams();
     final slots = {
       'M74': ['Group A', 'Group B', 'Group C', 'Group D', 'Group F'],
@@ -685,5 +723,26 @@ class ApiService {
           })
           .eq('match_no', matchNo);
     }
+  }
+  Map<String, dynamic>? _getKnockoutLoser(dynamic match) {
+    if (match['status'] != 'Finished') return null;
+
+    final team1Score = match['team1_score'];
+    final team2Score = match['team2_score'];
+
+    if (team1Score == null || team2Score == null) return null;
+    if (team1Score == team2Score) return null;
+
+    if (team1Score < team2Score) {
+      return {
+        'name': match['team1'],
+        'flag': match['team1_flag_code'],
+      };
+    }
+
+    return {
+      'name': match['team2'],
+      'flag': match['team2_flag_code'],
+    };
   }
 }

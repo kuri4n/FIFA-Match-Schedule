@@ -57,7 +57,6 @@ class FootballDataService {
           .eq('football_data_match_id', matchId);
     }
 
-    print('World Cup matches synced successfully');
   }
 
   String _mapStatus(String? status) {
@@ -140,6 +139,5 @@ class FootballDataService {
           .eq('football_data_match_id', matchId);
     }
 
-    print('Knockout matches synced successfully');
   }
 }
