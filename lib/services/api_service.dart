@@ -182,7 +182,9 @@ class ApiService {
           )
         ''')
         .order('group_name', ascending: true)
-        .order('points', ascending: false);
+        .order('points', ascending: false)
+        .order('goal_difference', ascending: false)
+        .order('goals_for', ascending: false);
 
     return response.map<GroupStandingModel>((row) {
       final team = row['teams'];

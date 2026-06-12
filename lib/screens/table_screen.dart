@@ -63,13 +63,12 @@ class _TableScreenState extends State<TableScreen>
                 _rotationController.repeat();
 
                 try {
-                  //await FootballDataService().syncWorldCupMatches();
-                  //await FootballDataService().syncKnockoutMatches();
+                  await FootballDataService().syncWorldCupMatches();
+                  await FootballDataService().syncKnockoutMatches();
                   await ApiService().recalculateStandings();
                   await ApiService().populateKnownRoundOf32Slots();
-                  await ApiService().populateThirdPlaceSlots();
+                  //await ApiService().populateThirdPlaceSlots();
                   await ApiService().advanceKnockoutWinners();
-                  await ApiService().getBestThirdPlacedTeams();
 
                   if (!context.mounted) return;
 
