@@ -7,8 +7,8 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static Future<void> init() async {
+    print('NotificationService init started');
     tz.initializeTimeZones();
-
     tz.setLocalLocation(
       tz.getLocation('Asia/Kolkata'),
     );
@@ -22,10 +22,13 @@ class NotificationService {
 
     await _notifications.initialize(settings);
 
-    await _notifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+    final androidImpl = _notifications
+      .resolvePlatformSpecificImplementation
+          <AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidImpl?.requestNotificationsPermission();
+    await androidImpl?.requestExactAlarmsPermission();
+    
   }
 
   static Future<void> scheduleMatchReminder({
@@ -35,20 +38,15 @@ class NotificationService {
     required DateTime scheduledTime,
   }) async {
     if (scheduledTime.isBefore(DateTime.now())) {
-      print('Notification not scheduled because time is in the past');
       return;
     }
 
-    print('Scheduling notification for: $scheduledTime');
 
     await _notifications.zonedSchedule(
       id,
       title,
       body,
-      tz.TZDateTime.from(
-        scheduledTime,
-        tz.local,
-      ),
+      tz.TZDateTime.from(scheduledTime, tz.local),
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'match_reminders',
@@ -59,17 +57,6 @@ class NotificationService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-    );
-  }
-
-  static Future<void> scheduleTestReminder() async {
-    await scheduleMatchReminder(
-      id: 1000,
-      title: 'Test Scheduled Reminder',
-      body: 'This scheduled notification is working',
-      scheduledTime: DateTime.now().add(
-        const Duration(seconds: 30),
-      ),
     );
   }
 
@@ -89,4 +76,36 @@ class NotificationService {
       ),
     );
   }
+  static Future<void> schedule15MinReminder({
+    required int matchId,
+    required String homeTeam,
+    required String awayTeam,
+    required DateTime matchTime,
+  }) async {
+    await scheduleMatchReminder(
+      id: matchId * 10 + 15,
+      title: 'Match starts in 15 minutes',
+      body: '$homeTeam vs $awayTeam starts soon!',
+      scheduledTime: matchTime.subtract(
+        const Duration(minutes: 15),
+      ),
+    );
+  }
+
+  static Future<void> schedule1HourReminder({
+    required int matchId,
+    required String homeTeam,
+    required String awayTeam,
+    required DateTime matchTime,
+  }) async {
+    await scheduleMatchReminder(
+      id: matchId * 10 + 60,
+      title: 'Match starts in 1 hour',
+      body: '$homeTeam vs $awayTeam starts in 1 hour.',
+      scheduledTime: matchTime.subtract(
+        const Duration(hours: 1),
+      ),
+    );
+  }
+
 }

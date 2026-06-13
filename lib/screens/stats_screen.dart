@@ -4,6 +4,7 @@ import '../models/player_stat_model.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/flag_widget.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -107,6 +108,9 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
           );
         },
+      ),
+      bottomNavigationBar: const AppBottomNavBar(
+        currentIndex: 1,
       ),
     );
   }

@@ -3,6 +3,7 @@ import '../widgets/flag_widget.dart';
 import '../models/knockout_match_model.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 class KnockoutScreen extends StatefulWidget {
   const KnockoutScreen({super.key});
@@ -121,6 +122,9 @@ class _KnockoutScreenState extends State<KnockoutScreen> {
             ],
           );
         },
+      ),
+      bottomNavigationBar: const AppBottomNavBar(
+        currentIndex: 2,
       ),
     );
   }

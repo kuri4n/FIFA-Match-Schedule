@@ -102,18 +102,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.secondary2,
-        foregroundColor: Colors.white,
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Feature not available yet'),
-            ),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

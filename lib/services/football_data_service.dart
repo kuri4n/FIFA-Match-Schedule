@@ -140,4 +140,95 @@ class FootballDataService {
     }
 
   }
+  Future<void> syncWorldCupScorers() async {
+    final uri = Uri.parse(
+      '$_baseUrl/competitions/WC/scorers?season=2026&limit=100',
+    );
+
+    final response = await http.get(
+      uri,
+      headers: _headers,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to fetch World Cup scorers: ${response.body}',
+      );
+    }
+
+    final data = jsonDecode(response.body);
+    final scorers = data['scorers'] as List;
+
+    final client = Supabase.instance.client;
+
+    for (final scorer in scorers) {
+      final player = scorer['player'];
+      final team = scorer['team'];
+
+      final footballDataPlayerId = player['id'];
+      final playerName = player['name'];
+      final footballDataTeamId = team['id'];
+
+      final goals = scorer['goals'] ?? 0;
+      final assists = scorer['assists'] ?? 0;
+
+      final teamRows = await client
+          .from('teams')
+          .select('id')
+          .eq('football_data_team_id', footballDataTeamId)
+          .limit(1);
+
+      if (teamRows.isEmpty) {
+        print('Team not found for scorer: $playerName');
+        continue;
+      }
+
+      final teamId = teamRows.first['id'];
+
+      final existingPlayerRows = await client
+          .from('players')
+          .select('id')
+          .eq('football_data_player_id', footballDataPlayerId)
+          .limit(1);
+
+      if (existingPlayerRows.isNotEmpty) {
+        await client
+            .from('players')
+            .update({
+              'goals': goals,
+              'assists': assists,
+            })
+            .eq('football_data_player_id', footballDataPlayerId);
+      } else {
+        final nameMatchRows = await client
+            .from('players')
+            .select('id')
+            .eq('team_id', teamId)
+            .eq('name', playerName)
+            .limit(1);
+
+        if (nameMatchRows.isNotEmpty) {
+          await client
+              .from('players')
+              .update({
+                'football_data_player_id': footballDataPlayerId,
+                'goals': goals,
+                'assists': assists,
+              })
+              .eq('id', nameMatchRows.first['id']);
+        } else {
+          await client.from('players').insert({
+            'team_id': teamId,
+            'name': playerName,
+            'position': player['section'],
+            'jersey_number': player['shirtNumber'],
+            'goals': goals,
+            'assists': assists,
+            'football_data_player_id': footballDataPlayerId,
+          });
+        }
+      }
+    }
+  }
+  
 }

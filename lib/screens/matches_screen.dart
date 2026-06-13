@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../utils/page_transitions.dart';
 import '../widgets/match_card.dart';
 import 'match_details_screen.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/flag_widget.dart';
@@ -468,6 +469,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
               ],
             );
           },
+        ),
+        bottomNavigationBar: const AppBottomNavBar(
+          currentIndex: 0,
         ),
       ),
     );

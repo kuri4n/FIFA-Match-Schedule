@@ -16,6 +16,8 @@ class MatchModel {
   final int? homeScore;
   final int? awayScore;
 
+  final String venue;
+
   bool isStarred;
 
   MatchModel({
@@ -29,6 +31,7 @@ class MatchModel {
     required this.matchDateTime,
     required this.status,
     required this.stageLabel,
+    required this.venue,
     this.homeScore,
     this.awayScore,
     this.isStarred = false,

@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/flag_widget.dart';
 import '../services/football_data_service.dart';
+import '../widgets/bottom_nav_bar.dart';
 
 class TableScreen extends StatefulWidget {
   const TableScreen({super.key});
@@ -130,6 +131,9 @@ class _TableScreenState extends State<TableScreen>
             },
           );
         },
+      ),
+      bottomNavigationBar: const AppBottomNavBar(
+        currentIndex: 3,
       ),
     );
   }

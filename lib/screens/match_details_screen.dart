@@ -169,6 +169,7 @@ class _MatchDetailsScreenState
 
                   const SizedBox(height: 10),
 
+
                   FutureBuilder<List<MatchEventModel>>(
                     future: eventsFuture,
                     builder: (context, snapshot) {
@@ -206,6 +207,26 @@ class _MatchDetailsScreenState
                         ],
                       );
                     },
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.stadium,
+                        size: 18,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.match.venue,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -258,10 +279,20 @@ class _MatchDetailsScreenState
                                 onTap: () async {
                                   Navigator.pop(context);
 
-                                  await ApiService().addReminder(
-                                    widget.match.id,
-                                    60,
+                                  try {
+                                    await ApiService().addReminder(
+                                      widget.match.id,
+                                      60,
+                                    );
+                                  } catch (_) {
+                                  }
+                                  await NotificationService.schedule1HourReminder(
+                                    matchId: widget.match.id,
+                                    homeTeam: widget.match.homeTeam,
+                                    awayTeam: widget.match.awayTeam,
+                                    matchTime: widget.match.matchDateTime,
                                   );
+
 
                                   if (!context.mounted) return;
 
@@ -286,9 +317,19 @@ class _MatchDetailsScreenState
                                 onTap: () async {
                                   Navigator.pop(context);
 
-                                  await ApiService().addReminder(
-                                    widget.match.id,
-                                    15,
+                                  try {
+                                    await ApiService().addReminder(
+                                      widget.match.id,
+                                      15,
+                                    );
+                                  } catch (_) {
+                                    print('Reminder already exists in database');
+                                  }
+                                  await NotificationService.schedule15MinReminder(
+                                    matchId: widget.match.id,
+                                    homeTeam: widget.match.homeTeam,
+                                    awayTeam: widget.match.awayTeam,
+                                    matchTime: widget.match.matchDateTime,
                                   );
 
                                   if (!context.mounted) return;

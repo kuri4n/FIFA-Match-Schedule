@@ -157,6 +157,7 @@ class ApiService {
             matchDateTime: DateTime.parse(row['kickoff_time']).toLocal(),
             status: row['status'] ?? 'Scheduled',
             stageLabel: row['round'] ?? 'Group Stage',
+            venue: row['venue'] ?? 'Venue TBD',
             homeScore: row['home_score'],
             awayScore: row['away_score'],
             isStarred:
@@ -183,6 +184,7 @@ class ApiService {
             matchDateTime: DateTime.parse(row['kickoff_time']).toLocal(),
             status: row['status'] ?? 'Scheduled',
             stageLabel: row['round_name'] ?? 'Knockout',
+            venue: row['venue'] ?? 'Venue TBD',
             homeScore: row['team1_score'],
             awayScore: row['team2_score'],
             isStarred:

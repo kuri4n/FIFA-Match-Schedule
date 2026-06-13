@@ -6,9 +6,7 @@ import 'screens/startup_screen.dart';
 import 'services/notification_service.dart';
 import 'theme/app_colors.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'services/football_api_service.dart';
 import 'services/football_data_service.dart';
-import '../services/api_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +18,7 @@ Future<void> main() async {
     url: 'https://stnidxbsejcaljtptrdh.supabase.co',
     anonKey: 'sb_publishable_HbH80m4D4q-PUU7o2XurRw_j3clK3TY',
   );
+  await FootballDataService().syncWorldCupScorers();
 
   runApp(const MyApp());
 }
