@@ -42,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await FootballDataService().syncWorldCupMatches();
       await FootballDataService().syncKnockoutMatches();
+      await FootballDataService().syncWorldCupScorers();
 
       await ApiService().recalculateStandings();
       await ApiService().populateKnownRoundOf32Slots();

@@ -58,6 +58,9 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
     );
+    print('NOW: ${DateTime.now()}');
+    print('SCHEDULED: $scheduledTime');
+    print('IS PAST: ${scheduledTime.isBefore(DateTime.now())}');
   }
 
   static Future<void> showTestNotification() async {
@@ -86,7 +89,7 @@ class NotificationService {
       id: matchId * 10 + 15,
       title: 'Match starts in 15 minutes',
       body: '$homeTeam vs $awayTeam starts soon!',
-      scheduledTime: matchTime.subtract(
+      scheduledTime: matchTime.toLocal().subtract(
         const Duration(minutes: 15),
       ),
     );
@@ -102,7 +105,7 @@ class NotificationService {
       id: matchId * 10 + 60,
       title: 'Match starts in 1 hour',
       body: '$homeTeam vs $awayTeam starts in 1 hour.',
-      scheduledTime: matchTime.subtract(
+      scheduledTime: matchTime.toLocal().subtract(
         const Duration(hours: 1),
       ),
     );

@@ -179,7 +179,6 @@ class FootballDataService {
           .limit(1);
 
       if (teamRows.isEmpty) {
-        print('Team not found for scorer: $playerName');
         continue;
       }
 
