@@ -22,6 +22,11 @@ class MatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final status = match.status.toLowerCase();
+    final isFinished = status == 'finished';
+    final isLive = status == 'live';
+
+
     return AnimatedScale(
       duration: const Duration(milliseconds: 250),
       scale: isExpanded ? 1.08 : 1.0,
@@ -73,7 +78,7 @@ class MatchCard extends StatelessWidget {
                   ),
                 ),
 
-              if (isExpanded && match.status != 'Finished')
+              if (isExpanded && !isFinished)
                 Positioned(
                   left: 8,
                   top: 8,
@@ -101,7 +106,7 @@ class MatchCard extends StatelessWidget {
                       match.homeTeam,
                       match.homeFlagCode,
                     ),
-                    _centerSection(context, match),
+                    _centerSection(context, match, isFinished,isLive),
                     _teamSection(
                       match.awayTeam,
                       match.awayFlagCode,
@@ -137,13 +142,23 @@ class MatchCard extends StatelessWidget {
     );
   }
 
-  Widget _centerSection(BuildContext context, MatchModel match) {
-    if (match.status == 'Finished') {
+  Widget _centerSection(
+    BuildContext context,
+    MatchModel match,
+    bool isFinished,
+    bool isLive,
+  ) {
+    final shouldShowScore =
+        (isFinished || isLive) &&
+        match.homeScore != null &&
+        match.awayScore != null;
+
+    if (shouldShowScore) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '${match.homeScore ?? 0} - ${match.awayScore ?? 0}',
+            '${match.homeScore} - ${match.awayScore}',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 26,
@@ -151,10 +166,10 @@ class MatchCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'FT',
+          Text(
+            isLive ? 'LIVE' : 'FT',
             style: TextStyle(
-              color: Colors.white70,
+              color: isLive ? Colors.greenAccent : Colors.white70,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -176,8 +191,7 @@ class MatchCard extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          TimeOfDay.fromDateTime(match.matchDateTime)
-              .format(context),
+          TimeOfDay.fromDateTime(match.matchDateTime).format(context),
           style: const TextStyle(
             color: Colors.white70,
           ),

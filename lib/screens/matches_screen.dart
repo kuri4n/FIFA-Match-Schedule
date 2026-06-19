@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/match_model.dart';
 import '../services/api_service.dart';
@@ -7,16 +8,13 @@ import '../utils/page_transitions.dart';
 import '../widgets/match_card.dart';
 import 'match_details_screen.dart';
 import '../widgets/bottom_nav_bar.dart';
-
-import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/flag_widget.dart';
 
 class MatchesScreen extends StatefulWidget {
   const MatchesScreen({super.key});
 
   @override
-  State<MatchesScreen> createState() =>
-      _MatchesScreenState();
+  State<MatchesScreen> createState() => _MatchesScreenState();
 }
 
 bool showFavoriteOnly = false;
@@ -25,37 +23,19 @@ String? favoriteTeamName;
 
 String _formatDateHeader(DateTime date) {
   const days = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
   ];
 
   const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
   return '${days[date.weekday - 1]} ${date.day} ${months[date.month - 1]} ${date.year}';
 }
 
 bool _isSameDay(DateTime a, DateTime b) {
-  return a.year == b.year &&
-      a.month == b.month &&
-      a.day == b.day;
+  return a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 class _MatchesScreenState extends State<MatchesScreen> {
@@ -67,6 +47,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
   bool showStarredOnly = false;
 
   final ScrollController _scrollController = ScrollController();
+  
+  // This key acts like a tracker to find the exact match on the screen
+  final GlobalKey _targetMatchKey = GlobalKey(); 
   bool hasAutoScrolled = false;
 
   @override
@@ -77,13 +60,13 @@ class _MatchesScreenState extends State<MatchesScreen> {
   }
 
   Future<void> _loadFavoriteTeam() async {
-  final prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
-  setState(() {
-    favoriteTeamCode = prefs.getString('favorite_team_code');
-    favoriteTeamName = prefs.getString('favorite_team_name');
-  });
-}
+    setState(() {
+      favoriteTeamCode = prefs.getString('favorite_team_code');
+      favoriteTeamName = prefs.getString('favorite_team_name');
+    });
+  }
 
   @override
   void dispose() {
@@ -101,23 +84,14 @@ class _MatchesScreenState extends State<MatchesScreen> {
     return sortedMatches;
   }
 
-  List<String> _buildTeamFilterList(
-    List<MatchModel> matches,
-  ) {
+  List<String> _buildTeamFilterList(List<MatchModel> matches) {
     final teams = matches
-        .expand(
-          (match) => [
-            match.homeTeam,
-            match.awayTeam,
-          ],
-        )
-        .where(
-          (team) =>
-              !team.startsWith('Winner') &&
-              !team.startsWith('Runner-up') &&
-              !team.startsWith('Loser') &&
-              !team.startsWith('3rd'),
-        )
+        .expand((match) => [match.homeTeam, match.awayTeam])
+        .where((team) =>
+            !team.startsWith('Winner') &&
+            !team.startsWith('Runner-up') &&
+            !team.startsWith('Loser') &&
+            !team.startsWith('3rd'))
         .toSet()
         .toList()
       ..sort();
@@ -125,20 +99,15 @@ class _MatchesScreenState extends State<MatchesScreen> {
     return ['All', ...teams];
   }
 
-  List<MatchModel> _filterMatches(
-    List<MatchModel> matches,
-  ) {
+  List<MatchModel> _filterMatches(List<MatchModel> matches) {
     return matches.where((match) {
-      final matchesTeam =
-          selectedTeam == 'All' ||
+      final matchesTeam = selectedTeam == 'All' ||
           match.homeTeam == selectedTeam ||
           match.awayTeam == selectedTeam;
 
-      final matchesStarFilter =
-          !showStarredOnly || match.isStarred;
+      final matchesStarFilter = !showStarredOnly || match.isStarred;
 
-      final matchesFavoriteTeam =
-          !showFavoriteOnly ||
+      final matchesFavoriteTeam = !showFavoriteOnly ||
           match.homeFlagCode == favoriteTeamCode ||
           match.awayFlagCode == favoriteTeamCode ||
           match.homeTeam == favoriteTeamName ||
@@ -148,29 +117,28 @@ class _MatchesScreenState extends State<MatchesScreen> {
     }).toList();
   }
 
-  void _scrollToUpcomingMatch(List<MatchModel> matches) {
+  void _scrollToLastFinishedMatch(List<MatchModel> matches) {
     if (hasAutoScrolled || matches.isEmpty) return;
 
-    final index = matches.indexWhere(
-      (match) =>
-          match.status != 'Finished' &&
-          match.matchDateTime.isAfter(DateTime.now().subtract(
-            const Duration(hours: 3),
-          )),
+    final index = matches.lastIndexWhere(
+      (match) => match.status.toLowerCase() == 'finished',
     );
 
     if (index == -1) return;
 
     hasAutoScrolled = true;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_scrollController.hasClients) return;
-
-      _scrollController.animateTo(
-        index * 145,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOut,
-      );
+    // IMPORTANT FIX: Wait for 300ms so Flutter fully draws the UI first.
+    // Without this delay, the scroll command is ignored because the list doesn't exist yet.
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (_targetMatchKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _targetMatchKey.currentContext!,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutCubic,
+          alignment: 0.0, // 0.0 forces the specific MatchCard flush to the top edge
+        );
+      }
     });
   }
 
@@ -200,8 +168,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
         body: FutureBuilder<List<MatchModel>>(
           future: matchesFuture,
           builder: (context, snapshot) {
-            if (snapshot.connectionState ==
-                ConnectionState.waiting) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
                 child: CircularProgressIndicator(),
               );
@@ -214,9 +181,9 @@ class _MatchesScreenState extends State<MatchesScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      const Text(
                         'Unable to load matches',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white70,
                           fontSize: 16,
                         ),
@@ -245,13 +212,17 @@ class _MatchesScreenState extends State<MatchesScreen> {
               );
             }
 
-            final matches =
-                _sortMatches(snapshot.data ?? []);
-            final teams =
-                _buildTeamFilterList(matches);
-            final filteredMatches =
-                _filterMatches(matches);
-            _scrollToUpcomingMatch(filteredMatches);
+            final matches = _sortMatches(snapshot.data ?? []);
+            final teams = _buildTeamFilterList(matches);
+            final filteredMatches = _filterMatches(matches);
+            
+            // Find the index of the exact match we want to jump to
+            final lastFinishedIndex = filteredMatches.lastIndexWhere(
+              (match) => match.status.toLowerCase() == 'finished',
+            );
+
+            // Trigger the delay & scroll
+            _scrollToLastFinishedMatch(filteredMatches);
 
             return Column(
               children: [
@@ -263,23 +234,18 @@ class _MatchesScreenState extends State<MatchesScreen> {
                   child: Row(
                     children: [
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 14,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.secondary1,
-                          borderRadius:
-                              BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child:
-                            DropdownButtonHideUnderline(
+                        child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: selectedTeam,
-                            dropdownColor:
-                                AppColors.secondary1,
-                            iconEnabledColor:
-                                Colors.white,
+                            dropdownColor: AppColors.secondary1,
+                            iconEnabledColor: Colors.white,
                             style: const TextStyle(
                               color: Colors.white,
                             ),
@@ -298,20 +264,16 @@ class _MatchesScreenState extends State<MatchesScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(width: 12),
-
                       GestureDetector(
                         onTap: () {
                           setState(() {
-                            showStarredOnly =
-                                !showStarredOnly;
+                            showStarredOnly = !showStarredOnly;
                             expandedIndex = null;
                           });
                         },
                         child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
                           ),
@@ -319,10 +281,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
                             color: showStarredOnly
                                 ? Colors.amber
                                 : AppColors.secondary1,
-                            borderRadius:
-                                BorderRadius.circular(
-                              16,
-                            ),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
                             children: [
@@ -340,17 +299,14 @@ class _MatchesScreenState extends State<MatchesScreen> {
                                   color: showStarredOnly
                                       ? Colors.black
                                       : Colors.white,
-                                  fontWeight:
-                                      FontWeight.bold,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-
                       const SizedBox(width: 12),
-
                       if (favoriteTeamCode != null)
                         GestureDetector(
                           onTap: () {
@@ -380,7 +336,6 @@ class _MatchesScreenState extends State<MatchesScreen> {
                     ],
                   ),
                 ),
-
                 Expanded(
                   child: filteredMatches.isEmpty
                       ? const Center(
@@ -391,79 +346,86 @@ class _MatchesScreenState extends State<MatchesScreen> {
                             ),
                           ),
                         )
-                      : ListView.builder(
+                      : SingleChildScrollView(
                           controller: _scrollController,
-                          padding:
-                              const EdgeInsets.all(16),
-                          itemCount:
-                              filteredMatches.length,
-                          itemBuilder: (context, index) {
-                            final match =
-                                filteredMatches[index];
+                          // IMPORTANT FIX: Added 400 bottom padding. 
+                          // If there are only 1 or 2 upcoming matches left, the screen wouldn't 
+                          // physically be able to scroll far enough down to put the target match at the top.
+                          padding: const EdgeInsets.only(
+                            top: 16,
+                            left: 16,
+                            right: 16,
+                            bottom: 400, 
+                          ),
+                          child: Column(
+                            children: List.generate(filteredMatches.length, (index) {
+                              final match = filteredMatches[index];
 
-                            final showDateHeader = index == 0 ||
-                            !_isSameDay(
-                              filteredMatches[index - 1].matchDateTime,
-                              match.matchDateTime,
-                            );
+                              final showDateHeader = index == 0 ||
+                                  !_isSameDay(
+                                    filteredMatches[index - 1].matchDateTime,
+                                    match.matchDateTime,
+                                  );
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (showDateHeader)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      left: 4,
-                                      top: 18,
-                                      bottom: 10,
-                                    ),
-                                    child: Text(
-                                      _formatDateHeader(match.matchDateTime),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (showDateHeader)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 4,
+                                        top: 18,
+                                        bottom: 10,
+                                      ),
+                                      child: Text(
+                                        _formatDateHeader(match.matchDateTime),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
+                                  MatchCard(
+                                    // THIS assigns the tracker key specifically to the target match card
+                                    key: index == lastFinishedIndex ? _targetMatchKey : null,
+                                    match: match,
+                                    isExpanded: expandedIndex == index,
+                                    onLongPress: () {
+                                      setState(() {
+                                        expandedIndex = index;
+                                      });
+                                    },
+                                    onStarToggle: () async {
+                                      final newValue = !match.isStarred;
+
+                                      setState(() {
+                                        match.isStarred = newValue;
+                                      });
+
+                                      if (newValue) {
+                                        await ApiService().starMatch(match.id);
+                                      } else {
+                                        await ApiService().unstarMatch(match.id);
+                                      }
+                                    },
+                                    onTap: () async {
+                                      await Navigator.push(
+                                        context,
+                                        PageTransitions.fadeSlide(
+                                          MatchDetailsScreen(match: match),
+                                        ),
+                                      );
+
+                                      if (mounted) {
+                                        setState(() {});
+                                      }
+                                    },
                                   ),
-
-                                MatchCard(
-                                  match: match,
-                                  isExpanded: expandedIndex == index,
-                                  onLongPress: () {
-                                    setState(() {
-                                      expandedIndex = index;
-                                    });
-                                  },
-                                  onStarToggle: () async {
-                                    final newValue = !match.isStarred;
-
-                                    setState(() {
-                                      match.isStarred = newValue;
-                                    });
-
-                                    if (newValue) {
-                                      await ApiService().starMatch(match.id);
-                                    } else {
-                                      await ApiService().unstarMatch(match.id);
-                                    }
-                                  },
-                                  onTap: () async {
-                                    await Navigator.push(
-                                      context,
-                                      PageTransitions.fadeSlide(
-                                        MatchDetailsScreen(match: match),
-                                      ),
-                                    );
-
-                                    if (mounted) {
-                                      setState(() {});
-                                    }
-                                  },
-                                ),
-                              ],
-                            );
-                          },
+                                ],
+                              );
+                            }),
+                          ),
                         ),
                 ),
               ],

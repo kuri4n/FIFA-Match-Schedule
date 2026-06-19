@@ -4,9 +4,9 @@ import '../models/match_event_model.dart';
 import '../models/match_model.dart';
 import '../models/player_model.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/flag_widget.dart';
-import '../services/notification_service.dart';
 
 class MatchDetailsScreen extends StatefulWidget {
   final MatchModel match;
@@ -280,27 +280,28 @@ class _MatchDetailsScreenState
                                   Navigator.pop(context);
 
                                   try {
-                                    await ApiService().addReminder(
-                                      widget.match.id,
-                                      60,
+                                    await _setMatchReminder(60);
+
+                                    if (!context.mounted) return;
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Reminder set for 1 hour before kickoff',
+                                        ),
+                                      ),
                                     );
-                                  } catch (_) {
+                                  } catch (e) {
+                                    if (!context.mounted) return;
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Reminder already exists',
+                                        ),
+                                      ),
+                                    );
                                   }
-                                  await NotificationService.schedule1HourReminder(
-                                    matchId: widget.match.id,
-                                    homeTeam: widget.match.homeTeam,
-                                    awayTeam: widget.match.awayTeam,
-                                    matchTime: widget.match.matchDateTime,
-                                  );
-
-
-                                  if (!context.mounted) return;
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Reminder set for 1 hour before kickoff'),
-                                    ),
-                                  );
                                 },
                               ),
                               ListTile(
@@ -318,27 +319,28 @@ class _MatchDetailsScreenState
                                   Navigator.pop(context);
 
                                   try {
-                                    await ApiService().addReminder(
-                                      widget.match.id,
-                                      15,
+                                    await _setMatchReminder(15);
+
+                                    if (!context.mounted) return;
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Reminder set for 15 minutes before kickoff',
+                                        ),
+                                      ),
                                     );
-                                  } catch (_) {
-                                    print('Reminder already exists in database');
+                                  } catch (e) {
+                                    if (!context.mounted) return;
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Reminder already exists',
+                                        ),
+                                      ),
+                                    );
                                   }
-                                  await NotificationService.schedule15MinReminder(
-                                    matchId: widget.match.id,
-                                    homeTeam: widget.match.homeTeam,
-                                    awayTeam: widget.match.awayTeam,
-                                    matchTime: widget.match.matchDateTime,
-                                  );
-
-                                  if (!context.mounted) return;
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Reminder set for 15 minutes before kickoff'),
-                                    ),
-                                  );
                                 },
                               ),
                             ],
@@ -508,6 +510,30 @@ class _MatchDetailsScreenState
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _setMatchReminder(int minutesBefore) async {
+    await ApiService().addReminder(
+      widget.match.id,
+      minutesBefore,
+    );
+
+    if (minutesBefore == 60) {
+      await NotificationService.schedule1HourReminder(
+        matchId: widget.match.id,
+        homeTeam: widget.match.homeTeam,
+        awayTeam: widget.match.awayTeam,
+        matchTime: widget.match.matchDateTime,
+      );
+      return;
+    }
+
+    await NotificationService.schedule15MinReminder(
+      matchId: widget.match.id,
+      homeTeam: widget.match.homeTeam,
+      awayTeam: widget.match.awayTeam,
+      matchTime: widget.match.matchDateTime,
     );
   }
 
